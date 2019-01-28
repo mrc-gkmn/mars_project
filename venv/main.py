@@ -1,6 +1,8 @@
-import gpio
+import RPi.GPIO as gpio
 import smbus2
 import time
+import cv2
+import numpy as np
 
 # PIN decleration
 PIN_TRIGGER_L = 0
@@ -66,6 +68,8 @@ def USS():
     USS_distance_l = USS_measure("left")
     USS_distance_m = USS_measure("middle")
     USS_distance_r = USS_measure("right")
+
+    return USS_distance_l, USS_distance_m, USS_distance_r
 
 
 def USS_measure(direction):
@@ -136,6 +140,8 @@ def LT():
     LT_status_l = LT_measure("left")
     LT_status_r = LT_measure("right")
 
+    return LT_status_l, LT_status_r
+
 
 def LT_measure(direction):
     if direction is "left":
@@ -143,6 +149,97 @@ def LT_measure(direction):
 
     if direction is "right":
         return gpio.input(PIN_LT_R)
+
+
+# _____________________________#
+# Objectrecognition(ObRec) Logic
+# ____________________________#
+def obj_rec(ticks):
+    lowerBound = np.array([160, 100, 100])
+    upperBound = np.array([179, 255, 255])
+
+    cam = cv2.VideoCapture(0)
+    kernelOpen = np.ones((5, 5))
+    kernelClose = np.ones((20, 20))
+
+    ret, img = cam.read()
+    img = cv2.resize(img, (340, 220))
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    pos_arr = []
+
+    for loop_number in range(ticks):
+        ret, img = cam.read()
+        img = cv2.resize(img, (340, 220))
+
+        # convert BGR to HSV
+        imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        # create the Mask
+        mask = cv2.inRange(imgHSV, lowerBound, upperBound)
+        # morphology
+        maskOpen = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernelOpen)
+        maskClose = cv2.morphologyEx(maskOpen, cv2.MORPH_CLOSE, kernelClose)
+
+        maskFinal = maskClose
+        _, conts, h = cv2.findContours(maskFinal.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        cv2.drawContours(img, conts, -1, (255, 0, 0), 3)
+        for i in range(len(conts)):
+            x, y, w, h = cv2.boundingRect(conts[i])
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            # cv2.putText(img, str(i + 1), (x, y + h), font, (0, 255, 255))
+
+            pos_arr.append([x,y,w,h,loop_number])
+
+        #cv2.imshow("maskClose", maskClose)
+        #cv2.imshow("maskOpen", maskOpen)
+        #cv2.imshow("mask", mask)
+        #cv2.imshow("cam", img)
+        #cv2.waitKey(10)
+
+    return pos_arr
+
+def pic_logic(position_array):
+    obj_list = []
+
+    if len(position_array)>0:
+
+        for each in position_array:
+            #Image Size is 340*220
+
+            x_pos = each[0]
+            y_pos = each[1]
+            width = each[2]
+            height = each[3]
+            loop_no = each[4]
+
+            area = width * height
+            middle_x_pos = (width+x_pos)/2
+            middle_y_pos = (height+y_pos)/2
+
+            if (area > 100): #Just noise
+                continue
+
+            if (area <= 100): #Detected Object
+                if (middle_x_pos> 170):
+                    #no return
+                    obj_list.append(["obj_leftside", middle_x_pos, area])
+
+                elif (middle_x_pos<= 170):
+                    obj_list.append(["obj_rightside", middle_x_pos, area])
+        print("Obj detected")
+
+        #sort for highest area object
+        sorted(obj_list, key=lambda arr: arr[2])
+        print(obj_list)
+
+        return obj_list, True
+
+    elif len(position_array)<1:
+        prit("No Obj detected")
+        return obj_list, False
+
 
 
 def motor_control(direction, milliseconds, motorspeed_l, motorspeed_r):
@@ -200,32 +297,63 @@ def write_i2c_block(adress, offset, data):
 
 def main():
 
-
+    obj_detected = False
 
     while True:
         dist_left = USS_measure("left")
         dist_middle = USS_measure("middle")
         dist_right = USS_measure("right")
 
-        # FORWARD
-        if dist_left > 50 or dist_middle > 30 or dist_right > 50:
-            ampl_fact_f = 5 * (dist_middle - DESIRED_DIST_M)
-            SPEED = MAX_SPEED + ampl_fact_f
-            motor_control("forward", 50, SPEED, SPEED)
+        position_array = obj_rec(2)
+        logic_array, obj_detected = pic_logic(position_array)
 
-        # RIGHT TURN
-        elif dist_left < 20 or dist_middle > 30 or dist_right > 20:
-            ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left)
-            SPEED_R = SPEED - ampl_fact_r
-            SPEED_L = SPEED + ampl_fact_r
-            motor_control("right", 50, SPEED_L, SPEED_R)
+        # Kein Camera-Objekt erkannt
+        if (obj_detected is False):
+            # FORWARD
+            if dist_left > 50 or dist_middle > 30 or dist_right > 50:
+                ampl_fact_f = 5 * (dist_middle - DESIRED_DIST_M)
+                SPEED = MAX_SPEED + ampl_fact_f
+                motor_control("forward", 50, SPEED, SPEED)
 
-        # LEFT TURN
-        elif dist_left > 20 or dist_middle > 30 or dist_right < 20:
-            ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right)
-            SPEED_R = SPEED - ampl_fact_l
-            SPEED_L = SPEED + ampl_fact_l
-            motor_control("left", 50, SPEED_L, SPEED_R)
+            # RIGHT TURN
+            elif dist_left < 20 or dist_middle > 30 or dist_right > 20:
+                ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left)
+                SPEED_R = SPEED - ampl_fact_r
+                SPEED_L = SPEED + ampl_fact_r
+                motor_control("right", 50, SPEED_L, SPEED_R)
+
+            # LEFT TURN
+            elif dist_left > 20 or dist_middle > 30 or dist_right < 20:
+                ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right)
+                SPEED_R = SPEED - ampl_fact_l
+                SPEED_L = SPEED + ampl_fact_l
+                motor_control("left", 50, SPEED_L, SPEED_R)
+
+        # Camera-Objekt erkannt
+        if (obj_detected is True):
+            # FORWARD
+            #if (dist_left > 50 or dist_middle > 30 or dist_right > 50):
+            #    ampl_fact_f = 5 * (dist_middle - DESIRED_DIST_M)
+            #    SPEED = MAX_SPEED + ampl_fact_f
+            #    motor_control("forward", 50, SPEED, SPEED)
+
+            # RIGHT TURN
+            if (dist_left < 20 or dist_middle > 30 or dist_right > 20) and logic_array[0][0] is "obj_leftside":
+                #obj_position mittig entspricht obj_pos = 170
+                #verstärkung durch 170/5 = 32
+                obj_position = logic_array[0][1]
+                ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left) + obj_position/5
+                SPEED_R = SPEED - ampl_fact_r
+                SPEED_L = SPEED + ampl_fact_r
+                motor_control("right", 50, SPEED_L, SPEED_R)
+
+            # LEFT TURN
+            elif (dist_left > 20 or dist_middle > 30 or dist_right < 20) and logic_array[0][0] is "obj_rightside":
+                obj_position = logic_array[0][1]
+                ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right) + obj_position/5
+                SPEED_R = SPEED - ampl_fact_l
+                SPEED_L = SPEED + ampl_fact_l
+                motor_control("left", 50, SPEED_L, SPEED_R)
 
 
 if __name__ == "__main__":
