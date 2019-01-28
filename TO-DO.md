@@ -1,5 +1,5 @@
 - [ ] GitHub - @booby-oh (Bettina)
-- [ ] Sensorliba - (Nico)
+- [ ] Sensorlibaries - (Nico)
 - [ ] Tracklogic (Track1, Track2, Track3, Track4) - (Stefan)
 - [ ] USS Logik 
 - [ ] Motorsteuerung - @StudentSchnitzel (Kai)
@@ -7,4 +7,5 @@
 - [ ] Gyro logic - @StudentSchnitzel (Kai)
 - [ ] I2c Infrastruktur - @StudentSchnitzel (Kai)
 - [ ] GPIO Infrastruktur
-- [ ] Super Loop / Parallel Processing @MartinSchafferer
+- [ ] Super Loop / Parallel Processing @MartinSchafferer (Martin)
+- [ ] Button/LEDs/Switch Logik
