@@ -4,30 +4,33 @@ import time
 import cv2
 import numpy as np
 
-# PIN decleration
+# PIN declaration
+# Ultrasonic declaration
 PIN_TRIGGER_L = 0
 PIN_TRIGGER_M = 0
 PIN_TRIGGER_R = 0
 PIN_ECHO_L = 0
 PIN_ECHO_M = 0
 PIN_ECHO_R = 0
-
+# Linetracker declaration
 PIN_LT_L = 0
 PIN_LT_R = 0
 
+# I2C declaration
 BUS = smbus2.SMBus(1)
 ENGINE_LEFT_ADD = 0x00
 ENGINE_RIGHT_ADD = 0x00
 GYRO_ADD = 0x00
-
 I2C_MOTORDRIVER_ADD = 0x00
 
+# MOTOR-CONTROL parameter
+# Speed
 SPEED_LEFT = 0
 SPEED_FORWAD = 130
 SPEED_RIGHT = 0
 MIN_SPEED = 10
 MAX_SPEED = 200
-
+# Direction-Optimum
 DESIRED_DIST_L = 20
 DESIRED_DIST_M = 30
 DESIRED_DIST_R = 20
@@ -65,6 +68,11 @@ def setup():
 # Ultrasonicsensor (USS) Logic
 # ____________________________#
 def USS():
+    """
+    Method to call methods to determine distance via ultrasonic-sensor (USS)
+    :return: Distance for left, middle and right USS
+    """
+
     USS_distance_l = USS_measure("left")
     USS_distance_m = USS_measure("middle")
     USS_distance_r = USS_measure("right")
@@ -73,6 +81,11 @@ def USS():
 
 
 def USS_measure(direction):
+    """
+    calculates distance for each USS and returns dependent direction
+    :param direction: determines the asked for direction
+    :return: returns just the value for the asked for direction (just left, just right, ...)
+    """
     if direction is "left":
         pulse_start_l = 0
         pulse_end_l = 0
@@ -137,6 +150,10 @@ def USS_measure(direction):
 # Linetracker(LT) Logic
 # ____________________________#
 def LT():
+    """
+    Method to call methods to determine values for all linetracker (LT)
+    :return: return the value for left and right LT
+    """
     LT_status_l = LT_measure("left")
     LT_status_r = LT_measure("right")
 
@@ -144,6 +161,11 @@ def LT():
 
 
 def LT_measure(direction):
+    """
+    Method to calculate values for each LT (left, right)
+    :param direction: determines the asked for direction
+    :return: returns just the value for the asked for direction (just left, just right)
+    """
     if direction is "left":
         return gpio.input(PIN_LT_L)
 
@@ -155,6 +177,13 @@ def LT_measure(direction):
 # Objectrecognition(ObRec) Logic
 # ____________________________#
 def obj_rec(ticks):
+    """
+    Method to start object recognition for defined color-range (lower/upperBound)
+
+    :param ticks: amount of loops needed to be done (measures for each loop and accumulates results)
+    :return: pos_arr which is an array and contains arrays again - arrays are filled with x-/y-/width-/height-value
+             of objects and the loop-number where the object was found
+    """
     lowerBound = np.array([160, 100, 100])
     upperBound = np.array([179, 255, 255])
 
@@ -201,6 +230,13 @@ def obj_rec(ticks):
     return pos_arr
 
 def pic_logic(position_array):
+    """
+    Method applies logic to the given array of information from the detected objects
+    :param position_array: array which contains x-/y-/width-/height-value
+             of objects and the loop-number where the object was found
+    :return: obj_list - an array with information where object was detected ("obj_leftside", "obj_rightside),
+             the middle position (x-axis) and the covered area from the object (width*height)
+    """
     obj_list = []
 
     if len(position_array)>0:
@@ -243,6 +279,14 @@ def pic_logic(position_array):
 
 
 def motor_control(direction, milliseconds, motorspeed_l, motorspeed_r):
+    """
+    Method to control the motors in terms of direction and speed.
+    :param direction: Symbolize the direction where you want to go to ("turnL", "forward", ...)
+    :param milliseconds: time how long you want to go into that direction
+    :param motorspeed_l: speed of the left motors
+    :param motorspeed_r: speed of the right motors
+    :return: nothing
+    """
     direct = ""
 
     if direction is "turnL":
@@ -296,6 +340,10 @@ def write_i2c_block(adress, offset, data):
 # ____________________________#
 
 def main():
+    """
+    Main Logic which loops when the raspberry is started
+    :return: nothing
+    """
 
     obj_detected = False
 
@@ -307,7 +355,7 @@ def main():
         position_array = obj_rec(2)
         logic_array, obj_detected = pic_logic(position_array)
 
-        # Kein Camera-Objekt erkannt
+        # No camera object detected
         if (obj_detected is False):
             # FORWARD
             if dist_left > 50 or dist_middle > 30 or dist_right > 50:
@@ -329,7 +377,7 @@ def main():
                 SPEED_L = SPEED + ampl_fact_l
                 motor_control("left", 50, SPEED_L, SPEED_R)
 
-        # Camera-Objekt erkannt
+        # camera object detected
         if (obj_detected is True):
             # FORWARD
             #if (dist_left > 50 or dist_middle > 30 or dist_right > 50):
