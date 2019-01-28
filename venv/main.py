@@ -13,7 +13,7 @@ PIN_ECHO_L = 0
 PIN_ECHO_M = 0
 PIN_ECHO_R = 0
 # Linetracker declaration
-PIN_LT_L = 0
+PIN_LT_L = 7
 PIN_LT_R = 0
 
 # I2C declaration
@@ -197,6 +197,9 @@ def obj_rec(ticks):
     font = cv2.FONT_HERSHEY_SIMPLEX
 
     pos_arr = []
+    
+    #adding 10 extra ticks for camera to initialize
+    ticks = ticks + 10
 
     for loop_number in range(ticks):
         ret, img = cam.read()
@@ -214,12 +217,14 @@ def obj_rec(ticks):
         _, conts, h = cv2.findContours(maskFinal.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
         cv2.drawContours(img, conts, -1, (255, 0, 0), 3)
-        for i in range(len(conts)):
-            x, y, w, h = cv2.boundingRect(conts[i])
-            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            # cv2.putText(img, str(i + 1), (x, y + h), font, (0, 255, 255))
+        
+        if ticks > 10:
+            for i in range(len(conts)):
+                x, y, w, h = cv2.boundingRect(conts[i])
+                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                # cv2.putText(img, str(i + 1), (x, y + h), font, (0, 255, 255))
 
-            pos_arr.append([x, y, w, h, loop_number])
+                pos_arr.append([x, y, w, h, loop_number])
 
         # cv2.imshow("maskClose", maskClose)
         # cv2.imshow("maskOpen", maskOpen)
@@ -369,10 +374,15 @@ def main():
     Main Logic which loops when the raspberry is started
     :return: nothing
     """
+    
+    setup()
 
     obj_detected = False
 
     while True:
+        #lt_right = LT_measure("right")
+        #lt_left = LT_measure("left")
+        
         dist_left = USS_measure("left")
         dist_middle = USS_measure("middle")
         dist_right = USS_measure("right")
@@ -431,3 +441,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
