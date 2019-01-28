@@ -219,15 +219,16 @@ def obj_rec(ticks):
             cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
             # cv2.putText(img, str(i + 1), (x, y + h), font, (0, 255, 255))
 
-            pos_arr.append([x,y,w,h,loop_number])
+            pos_arr.append([x, y, w, h, loop_number])
 
-        #cv2.imshow("maskClose", maskClose)
-        #cv2.imshow("maskOpen", maskOpen)
-        #cv2.imshow("mask", mask)
-        #cv2.imshow("cam", img)
-        #cv2.waitKey(10)
+        # cv2.imshow("maskClose", maskClose)
+        # cv2.imshow("maskOpen", maskOpen)
+        # cv2.imshow("mask", mask)
+        # cv2.imshow("cam", img)
+        # cv2.waitKey(10)
 
     return pos_arr
+
 
 def pic_logic(position_array):
     """
@@ -239,10 +240,10 @@ def pic_logic(position_array):
     """
     obj_list = []
 
-    if len(position_array)>0:
+    if len(position_array) > 0:
 
         for each in position_array:
-            #Image Size is 340*220
+            # Image Size is 340*220
 
             x_pos = each[0]
             y_pos = each[1]
@@ -251,31 +252,31 @@ def pic_logic(position_array):
             loop_no = each[4]
 
             area = width * height
-            middle_x_pos = (width+x_pos)/2
-            middle_y_pos = (height+y_pos)/2
+            middle_x_pos = (width + x_pos) / 2
+            middle_y_pos = (height + y_pos) / 2
 
-            if (area > 100): #Just noise
+            if (area > 100):  # Just noise
                 continue
 
-            if (area <= 100): #Detected Object
-                if (middle_x_pos> 170):
-                    #no return
+            if (area <= 100):  # Detected Object
+                if (middle_x_pos > 170):
+                    # no return
                     obj_list.append(["obj_leftside", middle_x_pos, area])
 
-                elif (middle_x_pos<= 170):
+                elif (middle_x_pos <= 170):
                     obj_list.append(["obj_rightside", middle_x_pos, area])
         print("Obj detected")
 
-        #sort for highest area object
+        # sort for highest area object
         sorted(obj_list, key=lambda arr: arr[2])
         print(obj_list)
+        print("\n")
 
         return obj_list, True
 
-    elif len(position_array)<1:
-        prit("No Obj detected")
+    elif len(position_array) < 1:
+        print("No Obj detected")
         return obj_list, False
-
 
 
 def motor_control(direction, milliseconds, motorspeed_l, motorspeed_r):
@@ -315,12 +316,23 @@ def motor_control(direction, milliseconds, motorspeed_l, motorspeed_r):
 # i2c BUS Logic
 # ____________________________#
 def read_i2c_byte(address):
+    """
+    Method to read byte from i2c-address
+    :param address: i2c-address to read byte from
+    :return: results stored on address
+    """
     # Open i2c bus 1 and read one byte from address, offset 0
     b = BUS.read_byte(adress, 0)
     return b
 
 
 def read_i2c_block(address, number):
+    """
+    Method to read block from i2c-address
+    :param address: i2c-address to read block from
+    :param number: number of parameters you want to read
+    :return: block of numbers(int) bytes of adress, offset 0
+    """
     # Read a block of number(int) bytes of address, offset 0
     # returning a list of number bytes
     block = BUS.read_i2c_block_data(address, 0, number)
@@ -328,10 +340,23 @@ def read_i2c_block(address, number):
 
 
 def write_i2c_byte(address, data):
+    """
+    Method to write byte to i2c-adress
+    :param address: i2c-address to write byte to
+    :param data:  data you want to write
+    :return: nothing
+    """
     BUS.write_byte_data(address, 0, data)
 
 
 def write_i2c_block(adress, offset, data):
+    """
+    Method to write block to i2c-adress
+    :param adress: i2c-address to write block to
+    :param offset: offset you want to consider
+    :param data: data you want to wirte
+    :return: nothing
+    """
     BUS.write_i2c_block_data(adress, offset, data)
 
 
@@ -380,17 +405,17 @@ def main():
         # camera object detected
         if (obj_detected is True):
             # FORWARD
-            #if (dist_left > 50 or dist_middle > 30 or dist_right > 50):
+            # if (dist_left > 50 or dist_middle > 30 or dist_right > 50):
             #    ampl_fact_f = 5 * (dist_middle - DESIRED_DIST_M)
             #    SPEED = MAX_SPEED + ampl_fact_f
             #    motor_control("forward", 50, SPEED, SPEED)
 
             # RIGHT TURN
             if (dist_left < 20 or dist_middle > 30 or dist_right > 20) and logic_array[0][0] is "obj_leftside":
-                #obj_position mittig entspricht obj_pos = 170
-                #verstärkung durch 170/5 = 32
+                # obj_position mittig entspricht obj_pos = 170
+                # verstärkung durch 170/5 = 32
                 obj_position = logic_array[0][1]
-                ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left) + obj_position/5
+                ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left) + obj_position / 5
                 SPEED_R = SPEED - ampl_fact_r
                 SPEED_L = SPEED + ampl_fact_r
                 motor_control("right", 50, SPEED_L, SPEED_R)
@@ -398,7 +423,7 @@ def main():
             # LEFT TURN
             elif (dist_left > 20 or dist_middle > 30 or dist_right < 20) and logic_array[0][0] is "obj_rightside":
                 obj_position = logic_array[0][1]
-                ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right) + obj_position/5
+                ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right) + obj_position / 5
                 SPEED_R = SPEED - ampl_fact_l
                 SPEED_L = SPEED + ampl_fact_l
                 motor_control("left", 50, SPEED_L, SPEED_R)
