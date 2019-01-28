@@ -8,4 +8,4 @@
 - [ ] I2c Infrastruktur - @StudentSchnitzel (Kai)
 - [ ] GPIO Infrastruktur
 - [ ] Super Loop / Parallel Processing @MartinSchafferer (Martin)
-- [ ] Button/LEDs/Switch Logik
+- [ ] Button/LEDs/Switch Logik (Bettina)
