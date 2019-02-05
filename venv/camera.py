@@ -94,20 +94,25 @@ def pic_logic(position_array):
             middle_x_pos = (width + x_pos) / 2
             middle_y_pos = (height + y_pos) / 2
 
+            # filter objects with small area
             if (area > 100):  # Just noise
                 continue
 
-            if (area <= 100):  # Detected Object
+            # filter objects with high y-coordinate
+            elif (y_pos < 90):
+                continue
+
+            elif (area <= 100):  # Detected Object
                 if (middle_x_pos > 170):
                     # no return
-                    obj_list.append(["obj_leftside", middle_x_pos, area])
+                    obj_list.append(["obj_leftside", middle_x_pos, middle_y_pos, y_pos, area])
 
                 elif (middle_x_pos <= 170):
-                    obj_list.append(["obj_rightside", middle_x_pos, area])
+                    obj_list.append(["obj_rightside", middle_x_pos, middle_y_pos, y_pos, area])
         print("Obj detected")
 
         # sort for highest area object
-        sorted(obj_list, key=lambda arr: arr[2])
+        sorted(obj_list, key=lambda arr: arr[4])
         print(obj_list)
         print("\n")
 

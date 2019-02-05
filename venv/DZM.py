@@ -15,8 +15,6 @@ def DZM_l(direction):
 
     setup.DZ_L = DZ_l
 
-    return DZ_l
-
 
 def DZM_r(direction):
     DZ_r = setup.DZ_R
@@ -31,5 +29,3 @@ def DZM_r(direction):
         DZ_r = DZ_r + 1
 
     setup.DZ_R = DZ_r
-
-    return DZ_r

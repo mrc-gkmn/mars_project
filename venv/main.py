@@ -31,7 +31,6 @@ def PrintException():
 # ____________________________#
 
 def main():
-    
     """
     Main Logic which loops when the raspberry is started
     :return: nothing
@@ -66,19 +65,18 @@ def main():
             if button_A == 1:
                 switcher = i2c.read_i2c_block(SWITCH_ADDRESS, 1)
 
-
                 while (i2c.read_i2c_block(button_B, 1) is not True):
 
-                    if switcher == 0 or switcher == 1: # track 1 and 2
-                        if switcher==0:
+                    if switcher == 0 or switcher == 1:  # track 1 and 2
+                        if switcher == 0:
                             SPEED = setup.MAX_SPEED
 
-                        else: #track2
-                            SPEED = setup.MAX_SPEED/2
+                        else:  # track2
+                            SPEED = setup.MAX_SPEED / 2
 
                         motor_control.motor_control("forward", 50, SPEED, SPEED)
 
-                    if switcher == 2: # track 3
+                    if switcher == 2:  # track 3
                         LT_left, LT_right = LT.LT()
 
                         SLOW_SIDE = 10
@@ -97,12 +95,14 @@ def main():
                             SPEED_R = SLOW_SIDE
                             motor_control.motor_control("turnR", 10, SPEED_L, SPEED_R)
 
-                    if switcher == 3: # track 4
+                    if switcher == 3:  # track 4
                         driving_time = 3
-                        motor_control.motor_control("stop", 50, 0, 0)
+                        motor_control.motor_control("stop", 5, 0, 0)
                         max_dist_l = 20
                         max_dist_m = 50
+                        max_dist_m_reverse = 10
                         max_dist_r = 20
+
 
                         gpio.add_event_detect(setup.PIN_DZM_L, gpio.RISING)
                         gpio.add_event_detect(setup.PIN_DZM_R, gpio.RISING)
@@ -112,86 +112,90 @@ def main():
                         position_array = camera.obj_rec(2)
                         logic_array, obj_detected = camera.pic_logic(position_array)
 
+                        SPEED_L = setup.MAX_SPEED
+                        SPEED_R = setup.MAX_SPEED
 
+
+                        # Assign Camera-Data and Process Camera Data (left/right-Factor)
+                        if len(logic_array) is not 0:
+                            first_obj_side = logic_array[0][0]
+                            first_x_avg_pos = logic_array[0][1]
+                            first_y_avg_pos = logic_array[0][2]
+                            first_y_pos = logic_array[0][3]
+                            first_area = logic_array[0][4]
+
+                            if first_obj_side is "obj_leftside":
+                                SPEED_L = SPEED_L + 0.25 * (first_x_avg_pos)
+                                SPEED_R = SPEED_R - 0.25 * (first_x_avg_pos)
+
+                            elif first_obj_side is "obj_rightside":
+                                SPEED_L = SPEED_L - 0.25 * first_x_avg_pos-(first_x_avg_pos%170)
+                                SPEED_R = SPEED_R + 0.25 * first_x_avg_pos-(first_x_avg_pos%170)
+
+                        # Driving Direction via Ultrasonicsensor
                         if USS_l > max_dist_l and USS_m > max_dist_m and USS_r > max_dist_r:
-                            # Fahrt vorwaerts
+                            # drive forward
                             driving_direction = "forward"
 
-                            SPEED = setup.MAX_SPEED
-                            motor_control.motor_control(driving_direction, 50, SPEED, SPEED)
-                            gpio.add_event_callback(setup.PIN_DZM_L, DZM.DZM_l(driving_direction))
-                            gpio.add_event_callback(setup.PIN_DZM_R, DZM.DZM_r(driving_direction))
+                        elif USS_l < max_dist_l and USS_m > max_dist_m and USS_r > max_dist_r:
+                            # drive right
+                            driving_direction = "right"
+                            SPEED_L = SPEED_L
+                            SPEED_R = SPEED_R - 2*(max_dist_l-USS_l)
 
-                        if USS_l > max_dist_l and USS_m > max_dist_m and USS_r > max_dist_r:
-                            pass
+                        elif USS_l > max_dist_l and USS_m > max_dist_m and USS_r < max_dist_r:
+                            # drive left
+                            driving_direction = "left"
+                            SPEED_L = SPEED_L - 2*(max_dist_l-USS_r)
+                            SPEED_R = SPEED_R
 
+                        elif USS_l > max_dist_l and USS_m < max_dist_m_reverse and USS_r > max_dist_r:
+                            # drive slow
+                            driving_direction = "stop"
+                            SPEED_L = SPEED_L - 2*(max_dist_l-USS_m)
+                            SPEED_R = SPEED_R - 2*(max_dist_l-USS_m)
+
+                        # Consider Drehzahlmesser
+                        max_dz_difference = 4
+                        DZM_faktor = 5
+
+                        DZ_dif = setup.DZ_L - setup.DZ_R
+
+                        if abs(DZ_dif) > max_dz_difference:
+                            if DZ_dif > 0:
+                                # orientate left
+                                SPEED_L = SPEED_L - DZM_faktor * DZ_dif
+                                SPEED_R = SPEED_R + DZM_faktor * DZ_dif
+
+                            if DZ_sum < 0:
+                                # orientate right
+                                SPEED_L = SPEED_L + DZM_faktor * DZ_dif
+                                SPEED_R = SPEED_R - DZM_faktor * DZ_dif
+
+                        # Maxspeed check
+                        if SPEED_L > setup.MAX_MAX_SPEED:
+                            SPEED_L = setup.MAX_MAX_SPEED
+
+                        if SPEED_R > setup.MAX_MAX_SPEED:
+                            SPEED_R = setup.MAX_MAX_SPEED
+
+                        # Minspeed check
+                        if SPEED_L > 0:
+                            SPEED_L = 0
+                        if SPEED_R > 0:
+                            SPEED_R = 0
+
+                        gpio.add_event_callback(setup.PIN_DZM_L, DZM.DZM_l(driving_direction))
+                        gpio.add_event_callback(setup.PIN_DZM_R, DZM.DZM_r(driving_direction))
+
+                        motor_control.motor_control(driving_direction, 50, SPEED_L, SPEED_R)
 
                         time.sleep(driving_time)
-                        motor_control.motor_control("stop", 50, 0, 0)
+                        motor_control.motor_control("stop", 5, 0, 0)
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-            # No camera object detected
-            if (obj_detected is False) and False:
-                # FORWARD
-                if dist_left > 50 or dist_middle > 30 or dist_right > 50:
-                    ampl_fact_f = 5 * (dist_middle - DESIRED_DIST_M)
-                    SPEED = MAX_SPEED + ampl_fact_f
-                    motor_control.motor_control("forward", 50, SPEED, SPEED)
-
-                # RIGHT TURN
-                elif dist_left < 20 or dist_middle > 30 or dist_right > 20:
-                    ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left)
-                    SPEED_R = SPEED - ampl_fact_r
-                    SPEED_L = SPEED + ampl_fact_r
-                    motor_control.motor_control("right", 50, SPEED_L, SPEED_R)
-
-                # LEFT TURN
-                elif dist_left > 20 or dist_middle > 30 or dist_right < 20:
-                    ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right)
-                    SPEED_R = SPEED - ampl_fact_l
-                    SPEED_L = SPEED + ampl_fact_l
-                    motor_control.motor_control("left", 50, SPEED_L, SPEED_R)
-
-        # camera object detected
-        if (obj_detected is True) and False:
-            # FORWARD
-            # if (dist_left > 50 or dist_middle > 30 or dist_right > 50):
-            #    ampl_fact_f = 5 * (dist_middle - DESIRED_DIST_M)
-            #    SPEED = MAX_SPEED + ampl_fact_f
-            #    motor_control.motor_control("forward", 50, SPEED, SPEED)
-
-            # RIGHT TURN
-            if (dist_left < 20 or dist_middle > 30 or dist_right > 20) and logic_array[0][0] is "obj_leftside":
-                # obj_position mittig entspricht obj_pos = 170
-                # verstaerkung durch 170/5 = 32
-                obj_position = logic_array[0][1]
-                ampl_fact_r = 5 * (DESIRED_DIST_L - dist_left) + obj_position / 5
-                SPEED_R = SPEED - ampl_fact_r
-                SPEED_L = SPEED + ampl_fact_r
-                motor_control.motor_control("right", 50, SPEED_L, SPEED_R)
-
-            # LEFT TURN
-            elif (dist_left > 20 or dist_middle > 30 or dist_right < 20) and logic_array[0][0] is "obj_rightside":
-                obj_position = logic_array[0][1]
-                ampl_fact_l = 5 * (DESIRED_DIST_R - dist_right) + obj_position / 5
-                SPEED_R = SPEED - ampl_fact_l
-                SPEED_L = SPEED + ampl_fact_l
-                motor_control.motor_control("left", 50, SPEED_L, SPEED_R)
     except KeyboardInterrupt:
         print("Keyboard interrupt")
     except Exception as e:
