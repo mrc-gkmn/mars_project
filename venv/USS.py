@@ -12,9 +12,9 @@ def USS():
     print("test")
     USS_distance_l = USS_measure("left")
     USS_distance_m = USS_measure("middle")
-    # USS_distance_r = USS_measure("right")
+    USS_distance_r = USS_measure("right")
 
-    return USS_distance_l, USS_distance_m  # , USS_distance_r
+    return USS_distance_l, USS_distance_m , USS_distance_r
 
 
 def USS_measure(direction):

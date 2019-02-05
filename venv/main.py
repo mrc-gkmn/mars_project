@@ -48,11 +48,6 @@ def main():
 
         while True:
 
-            while (switcher == 1):
-                tracklogic()
-            while (switcher == 2 and button  == True):
-                tracklogic2()
-
             # lt_right = LT.LT_measure("right")
             # lt_left = LT.LT_measure("left")
 
@@ -65,6 +60,90 @@ def main():
             logic_array, obj_detected = camera.pic_logic(position_array)
 
             print(str(logic_array) + " " + str(obj_detected) + "\n \n")
+
+            button_A = i2c.read_i2c_block(BUTTON_ADDRESS, 1)
+
+            if button_A == 1:
+                switcher = i2c.read_i2c_block(SWITCH_ADDRESS, 1)
+
+
+                while (i2c.read_i2c_block(button_B, 1) is not True):
+
+                    if switcher == 0 or switcher == 1: # track 1 and 2
+                        if switcher==0:
+                            SPEED = setup.MAX_SPEED
+
+                        else: #track2
+                            SPEED = setup.MAX_SPEED/2
+
+                        motor_control.motor_control("forward", 50, SPEED, SPEED)
+
+                    if switcher == 2: # track 3
+                        LT_left, LT_right = LT.LT()
+
+                        SLOW_SIDE = 10
+                        FAST_SIDE = 250
+
+                        if (LT_left == False and LT_right == False):
+                            motor_control.motor_control("forward", 10, 150, 150)
+
+                        elif (LT_left == True):
+                            SPEED_L = SLOW_SIDE
+                            SPEED_R = FAST_SIDE
+                            motor_control.motor_control("turnL", 10, SPEED_L, SPEED_R)
+
+                        elif (LT_right == True):
+                            SPEED_L = FAST_SIDE
+                            SPEED_R = SLOW_SIDE
+                            motor_control.motor_control("turnR", 10, SPEED_L, SPEED_R)
+
+                    if switcher == 3: # track 4
+                        driving_time = 3
+                        motor_control.motor_control("stop", 50, 0, 0)
+                        max_dist_l = 20
+                        max_dist_m = 50
+                        max_dist_r = 20
+
+                        gpio.add_event_detect(setup.PIN_DZM_L, gpio.RISING)
+                        gpio.add_event_detect(setup.PIN_DZM_R, gpio.RISING)
+
+                        USS_l, USS_m, USS_r = USS.USS_measure()
+
+                        position_array = camera.obj_rec(2)
+                        logic_array, obj_detected = camera.pic_logic(position_array)
+
+
+                        if USS_l > max_dist_l and USS_m > max_dist_m and USS_r > max_dist_r:
+                            # Fahrt vorwaerts
+                            driving_direction = "forward"
+
+                            SPEED = setup.MAX_SPEED
+                            motor_control.motor_control(driving_direction, 50, SPEED, SPEED)
+                            gpio.add_event_callback(setup.PIN_DZM_L, DZM.DZM_l(driving_direction))
+                            gpio.add_event_callback(setup.PIN_DZM_R, DZM.DZM_r(driving_direction))
+
+                        if USS_l > max_dist_l and USS_m > max_dist_m and USS_r > max_dist_r:
+                            pass
+
+
+                        time.sleep(driving_time)
+                        motor_control.motor_control("stop", 50, 0, 0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             # No camera object detected
             if (obj_detected is False) and False:

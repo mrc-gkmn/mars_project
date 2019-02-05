@@ -13,6 +13,11 @@ PIN_ECHO_R = 0
 # Linetracker declaration
 PIN_LT_L = 0
 PIN_LT_R = 0
+# Drehzahlmesser declaration
+PIN_DZM_L = 0
+PIN_DZM_R = 0
+DZ_L = 0
+DZ_R = 0
 
 # I2C declaration
 BUS = smbus2.SMBus(1)

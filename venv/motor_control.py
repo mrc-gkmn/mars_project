@@ -40,4 +40,7 @@ def motor_control(direction, milliseconds, motorspeed_l, motorspeed_r):
     write_i2c_block(I2C_MOTORDRIVER_ADD, direct, [motorspeed_l, motorspeed_r])
 
     # TODO Sleep hier reinpacken (IC2 Vorteile nutzen?)
-    time.sleep(milliseconds / 1000.0)
+    # time.sleep(milliseconds / 1000.0)
+
+    # TODO Stop motor
+
