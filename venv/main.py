@@ -13,6 +13,7 @@ import setup
 import USS
 import LT
 import camera
+import DZM
 
 
 def PrintException():
