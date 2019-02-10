@@ -1,3 +1,4 @@
+import setup as s
 
 # _____________________________#
 # i2c BUS Logic
@@ -9,7 +10,7 @@ def read_i2c_byte(address):
     :return: results stored on address
     """
     # Open i2c bus 1 and read one byte from address, offset 0
-    b = BUS.read_byte(adress, 0)
+    b = s.BUS.read_byte(adress, 0)
     return b
 
 
@@ -22,7 +23,7 @@ def read_i2c_block(address, number):
     """
     # Read a block of number(int) bytes of address, offset 0
     # returning a list of number bytes
-    block = BUS.read_i2c_block_data(address, 0, number)
+    block = s.BUS.read_i2c_block_data(address, 0, number)
     return block
 
 
@@ -33,7 +34,7 @@ def write_i2c_byte(address, data):
     :param data:  data you want to write
     :return: nothing
     """
-    BUS.write_byte_data(address, 0, data)
+    s.BUS.write_byte_data(address, 0, data)
 
 
 def write_i2c_block(adress, offset, data):
@@ -44,5 +45,4 @@ def write_i2c_block(adress, offset, data):
     :param data: data you want to wirte
     :return: nothing
     """
-    BUS.write_i2c_block_data(adress, offset, data)
-
+    s.BUS.write_i2c_block_data(adress, offset, data)

@@ -1,4 +1,5 @@
 import RPi.GPIO as gpio
+import setup
 
 
 def DZM_l(direction):
@@ -6,9 +7,9 @@ def DZM_l(direction):
 
     if (direction == "forward"):
         DZ_l = DZ_l + 1
-    if (direction == "turnL"):
+    if (direction == "left"):
         DZ_l = DZ_l - 1
-    if (direction == "turnR"):
+    if (direction == "right"):
         DZ_l = DZ_l + 1
     if (direction == "stop"):
         DZ_l = DZ_l + 1
@@ -21,9 +22,9 @@ def DZM_r(direction):
 
     if (direction == "forward"):
         DZ_r = DZ_r + 1
-    if (direction == "turnL"):
+    if (direction == "left"):
         DZ_r = DZ_r + 1
-    if (direction == "turnR"):
+    if (direction == "right"):
         DZ_r = DZ_r - 1
     if (direction == "stop"):
         DZ_r = DZ_r + 1

@@ -7,13 +7,13 @@ import sys
 import linecache
 
 # scripts
-import i2c
-import motor_control
 import setup
+import motor_control
 import USS
-import LT
+#import LT
 import camera
 import DZM
+import LED_control
 
 
 def PrintException():
@@ -25,6 +25,7 @@ def PrintException():
     line = linecache.getline(filename, lineno, f.f_globals)
     msg = 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
     print(msg)
+
 
 
 # _____________________________#
@@ -42,76 +43,117 @@ def main():
 
         print("Go")
 
-        motor_control.GPIO_motor_control()
-
+        #setup.PIN_pwm_r.stop()
+        #setup.PIN_pwm_l.stop()
+        #motor_control.GPIO_motor_control()
+                
+        motor_control.motor_control("stop", 5, 0, 0)
+        print(setup.BUS.read_i2c_block_data(0x20,0x02,1))
         print("Lets go")
+        
+        first_loop = 1
 
         while True:
 
-            # lt_right = LT.LT_measure("right")
-            # lt_left = LT.LT_measure("left")
+            #lt_right = LT.LT_measure("right")
+            #lt_left = LT.LT_measure("left")
 
             dist_left = USS.USS_measure("left")
             dist_middle = USS.USS_measure("middle")
-            # dist_right = USS.USS_measure("right")
-            print(str(dist_left) + " " + str(dist_middle) + "\n")
+            dist_right = USS.USS_measure("right")
+            print(str(dist_left) + " " + str(dist_middle) + " " + str(dist_right) + "\n")
 
-            position_array = camera.obj_rec(2)
-            logic_array, obj_detected = camera.pic_logic(position_array)
+            #position_array = camera.obj_rec(2)
+            #logic_array, obj_detected = camera.pic_logic(position_array)
 
-            print(str(logic_array) + " " + str(obj_detected) + "\n \n")
+            #print(str(logic_array) + " " + str(obj_detected) + "\n \n")
 
-            button_A = i2c.read_i2c_block(BUTTON_ADDRESS, 1)
-
-            if button_A == 1:
-                switcher = i2c.read_i2c_block(SWITCH_ADDRESS, 1)
-
-                while (i2c.read_i2c_block(button_B, 1) is not True):
-
+            #button_A = i2c.read_i2c_block(setup.BUTTON_A, 1)
+            button_A = gpio.input(setup.BUTTON_A)
+            print(" Button A:" + str(button_A))
+            
+            button_B = gpio.input(setup.BUTTON_B)
+            print(" Button B:" + str(button_B))
+            
+            
+            
+            if button_A == 0:
+                driving_time = 1
+                break_time = 0.1
+                #switcher = i2c.read_i2c_block(SWITCH_ADDRESS, 1)
+                switcher = gpio
+                switcher = 3
+                switcher = setup.read_switch()
+                print("switchter: " + str(switcher))
+                
+                button_B = gpio.input(setup.BUTTON_B)
+                
+                while (button_B == 1):
+                    button_B = gpio.input(setup.BUTTON_B)
+                    
                     if switcher == 0 or switcher == 1:  # track 1 and 2
                         if switcher == 0:
                             SPEED = setup.MAX_SPEED
 
                         else:  # track2
-                            SPEED = setup.MAX_SPEED / 2
-
-                        motor_control.motor_control("forward", 50, SPEED, SPEED)
+                            SPEED = setup.MAX_SPEED / 1.7                    
+                            
+                        if first_loop == 1:
+                            first_loop = 0
+                            motor_control.motor_control("forward", 50, SPEED, SPEED)
+                            
+                        #time.sleep(driving_time)
+                        #motor_control.motor_control("stop", 50 , 0, 0)
+                        #time.sleep(break_time)
 
                     if switcher == 2:  # track 3
+                        
                         LT_left, LT_right = LT.LT()
-
+                        print("LT_left: "+ str(LT_left) + " LT_right " + str(LT_right) + "\n")
+                        print(LT_array)
+                        
                         SLOW_SIDE = 10
                         FAST_SIDE = 250
 
-                        if (LT_left == False and LT_right == False):
-                            motor_control.motor_control("forward", 10, 150, 150)
+                        if (LT_left == 0 and LT_right == 0):
+                            if first_loop == 1:
+                                motor_control.motor_control("forward", 10, 150, 150)
+                                first_loop = 0
 
-                        elif (LT_left == True):
+                        elif (LT_left == 1):
+                            print("+++++++++++++++++++++++++++LT_left: "+ str(LT_left) + " LT_right " + str(LT_right) + "\n")
+                            first_loop = 1
                             SPEED_L = SLOW_SIDE
                             SPEED_R = FAST_SIDE
-                            motor_control.motor_control("turnL", 10, SPEED_L, SPEED_R)
+                            motor_control.motor_control("forward", 10, SPEED_L, SPEED_R)
 
-                        elif (LT_right == True):
+                        elif (LT_right == 1):
+                            print("___________________________LT_left: "+ str(LT_left) + " LT_right " + str(LT_right) + "\n")
+                            first_loop = 1
                             SPEED_L = FAST_SIDE
                             SPEED_R = SLOW_SIDE
-                            motor_control.motor_control("turnR", 10, SPEED_L, SPEED_R)
+                            motor_control.motor_control("forward", 10, SPEED_L, SPEED_R)
 
                     if switcher == 3:  # track 4
-                        driving_time = 3
+                        driving_direction = "forward"
+                        driving_time = 1
+                        waiting_time = 10
                         motor_control.motor_control("stop", 5, 0, 0)
+                        time.sleep(2)
                         max_dist_l = 20
                         max_dist_m = 50
                         max_dist_m_reverse = 10
                         max_dist_r = 20
 
 
-                        gpio.add_event_detect(setup.PIN_DZM_L, gpio.RISING)
-                        gpio.add_event_detect(setup.PIN_DZM_R, gpio.RISING)
+                        #gpio.add_event_detect(setup.PIN_DZM_L, gpio.RISING)
+                        #gpio.add_event_detect(setup.PIN_DZM_R, gpio.RISING)
 
-                        USS_l, USS_m, USS_r = USS.USS_measure()
+                        USS_l, USS_m, USS_r = USS.USS()
 
                         position_array = camera.obj_rec(2)
                         logic_array, obj_detected = camera.pic_logic(position_array)
+                        print(str(logic_array) + " " + str(obj_detected) + "\n \n")
 
                         SPEED_L = setup.MAX_SPEED
                         SPEED_R = setup.MAX_SPEED
@@ -140,13 +182,13 @@ def main():
 
                         elif USS_l < max_dist_l and USS_m > max_dist_m and USS_r > max_dist_r:
                             # drive right
-                            driving_direction = "right"
+                            driving_direction = "forward"
                             SPEED_L = SPEED_L
                             SPEED_R = SPEED_R - 2*(max_dist_l-USS_l)
 
                         elif USS_l > max_dist_l and USS_m > max_dist_m and USS_r < max_dist_r:
                             # drive left
-                            driving_direction = "left"
+                            driving_direction = "forward"
                             SPEED_L = SPEED_L - 2*(max_dist_l-USS_r)
                             SPEED_R = SPEED_R
 
@@ -181,20 +223,25 @@ def main():
                             SPEED_R = setup.MAX_MAX_SPEED
 
                         # Minspeed check
-                        if SPEED_L > 0:
+                        if SPEED_L < 0:
                             SPEED_L = 0
-                        if SPEED_R > 0:
+                        if SPEED_R < 0:
                             SPEED_R = 0
+                            
 
-                        gpio.add_event_callback(setup.PIN_DZM_L, DZM.DZM_l(driving_direction))
-                        gpio.add_event_callback(setup.PIN_DZM_R, DZM.DZM_r(driving_direction))
-
+                        #gpio.add_event_callback(setup.PIN_DZM_L, DZM.DZM_l(driving_direction))
+                        #gpio.add_event_callback(setup.PIN_DZM_R, DZM.DZM_r(driving_direction))
+                        print("Speed L:" + str(SPEED_L)+"Speed R:" +str(SPEED_R))
                         motor_control.motor_control(driving_direction, 50, SPEED_L, SPEED_R)
 
                         time.sleep(driving_time)
                         motor_control.motor_control("stop", 5, 0, 0)
-
-
+                        time.sleep(waiting_time)
+                    
+                    #button_A = gpio.input(setup.BUTTON_A)
+                    if (button_B == 0):
+                        motor_control.motor_control("stop", 5, 0, 0)
+                        first_loop = 1
 
 
     except KeyboardInterrupt:

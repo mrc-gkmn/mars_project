@@ -8,7 +8,6 @@ import numpy as np
 def obj_rec(ticks):
     """
     Method to start object recognition for defined color-range (lower/upperBound)
-
     :param ticks: amount of loops needed to be done (measures for each loop and accumulates results)
     :return: pos_arr which is an array and contains arrays again - arrays are filled with x-/y-/width-/height-value
              of objects and the loop-number where the object was found
@@ -121,4 +120,3 @@ def pic_logic(position_array):
     elif len(position_array) < 1:
         print("No Obj detected")
         return obj_list, False
-
